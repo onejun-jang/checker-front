@@ -1,0 +1,77 @@
+.container { width: 100%; padding: 24px; }
+
+.header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 18px;
+}
+
+.title { margin: 0; font-size: 26px; }
+.subTitle { margin-top: 6px; font-size: 13px; opacity: 0.7; }
+
+.headerRight { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+.ghostButton {
+  padding: 10px 14px; border-radius: 10px;
+  border: 1px solid #e5e7eb; background: #fff; cursor: pointer;
+}
+
+.section { margin-top: 18px; }
+.sectionTitle { font-size: 18px; margin: 0 0 10px; }
+
+.sectionHeader { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+
+.badge {
+  padding: 2px 10px; border-radius: 999px;
+  background: #111827; color: #fff; font-size: 12px;
+}
+
+.form {
+  display: grid; gap: 12px;
+  border: 1px solid #e5e7eb; background: #fff;
+  border-radius: 12px; padding: 14px;
+  max-width: 520px;
+}
+
+.field { display: grid; gap: 6px; }
+.label { font-size: 13px; opacity: 0.8; }
+
+.input {
+  padding: 10px 12px; border: 1px solid #d1d5db;
+  border-radius: 10px; font-size: 14px;
+}
+
+.primaryButton {
+  padding: 10px 14px; border-radius: 10px;
+  border: none; background: #111827; color: #fff; cursor: pointer;
+}
+
+.primaryButton:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.error { color: #dc2626; font-size: 13px; }
+
+.empty {
+  padding: 14px; border: 1px dashed #e5e7eb;
+  border-radius: 12px; background: #fafafa;
+  font-size: 14px; opacity: 0.8;
+  max-width: 720px;
+}
+
+.list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; max-width: 720px; }
+
+.card {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px;
+  border: 1px solid #e5e7eb; background: #fff;
+  border-radius: 12px; padding: 14px;
+}
+
+.friendLeft { min-width: 0; }
+.friendName { font-weight: 700; }
+.friendId { font-size: 12px; opacity: 0.7; }
+
+.dangerButton {
+  padding: 8px 12px; border-radius: 10px;
+  border: 1px solid #fecaca; background: #fff;
+  color: #dc2626; cursor: pointer; white-space: nowrap;
+}
+.dangerButton:disabled { opacity: 0.6; cursor: not-allowed; }

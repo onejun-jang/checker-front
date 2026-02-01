@@ -1,0 +1,70 @@
+.container { width: 100%; padding: 24px; }
+
+.header {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
+}
+
+.title { margin: 0; font-size: 22px; }
+
+.headerRight { display: flex; gap: 10px; align-items: center; }
+
+.ghostButton {
+  padding: 10px 14px; border-radius: 10px;
+  border: 1px solid #e5e7eb; background: #fff; cursor: pointer;
+}
+
+.form {
+  display: grid; gap: 12px;
+  border: 1px solid #e5e7eb; background: #fff;
+  border-radius: 12px; padding: 14px;
+  max-width: 720px;
+}
+
+.field { display: grid; gap: 6px; }
+
+.label { font-size: 13px; opacity: 0.8; }
+
+.select, .textarea {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.textarea { resize: vertical; }
+
+.primaryButton {
+  width: fit-content;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  background: #111827;
+  color: #fff;
+  cursor: pointer;
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error { color: #dc2626; font-size: 13px; }
+
+.empty {
+  padding: 14px;
+  border: 1px dashed #e5e7eb;
+  border-radius: 12px;
+  background: #fafafa;
+  font-size: 14px;
+  opacity: 0.9;
+  max-width: 720px;
+}
+
+.linkButton {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}

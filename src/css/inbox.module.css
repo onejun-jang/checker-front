@@ -1,0 +1,63 @@
+.container { width: 100%; padding: 24px; }
+
+.header {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
+}
+.title { margin: 0; font-size: 22px; }
+.headerRight { display: flex; gap: 10px; align-items: center; }
+
+.ghostButton {
+  padding: 10px 14px; border-radius: 10px;
+  border: 1px solid #e5e7eb; background: #fff; cursor: pointer;
+}
+
+.tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+
+.tab, .tabActive {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+.tabActive {
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+}
+
+.empty {
+  padding: 14px;
+  border: 1px dashed #e5e7eb;
+  border-radius: 12px;
+  background: #fafafa;
+  font-size: 14px;
+  opacity: 0.9;
+  max-width: 720px;
+}
+
+.list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; max-width: 720px; }
+
+.card {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.cardTop { display: grid; gap: 8px; margin-bottom: 6px; }
+
+.checkLine { display: inline-flex; align-items: center; gap: 8px; }
+
+.checkText { font-size: 13px; opacity: 0.8; }
+
+.meta {
+  display: flex; justify-content: space-between; gap: 10px;
+  font-size: 12px; opacity: 0.75;
+}
+.from { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.time { white-space: nowrap; }
+
+.message { font-size: 14px; line-height: 1.4; }
