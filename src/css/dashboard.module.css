@@ -42,3 +42,24 @@
   background: #fff;
   cursor: pointer;
 }
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatarButton {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  line-height: 0;
+}
+

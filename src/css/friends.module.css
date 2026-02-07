@@ -1,4 +1,4 @@
-.container { width: 100%; padding: 24px; }
+.container { width: 90%; padding: 24px; }
 
 .header {
   display: flex; justify-content: space-between; align-items: flex-start;
@@ -75,3 +75,9 @@
   color: #dc2626; cursor: pointer; white-space: nowrap;
 }
 .dangerButton:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.resultBox {
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 12px;
+}

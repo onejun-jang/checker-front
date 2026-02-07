@@ -1,4 +1,4 @@
-.container { width: 100%; padding: 24px; }
+.container { width: 90%; padding: 24px; }
 
 .header {
   display: flex; justify-content: space-between; align-items: center;
@@ -7,12 +7,22 @@
 
 .title { margin: 0; font-size: 22px; }
 
-.headerRight { display: flex; gap: 10px; align-items: center; }
-
-.ghostButton {
-  padding: 10px 14px; border-radius: 10px;
-  border: 1px solid #e5e7eb; background: #fff; cursor: pointer;
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;          /* ✅ 화면 좁아지면 줄바꿈 */
 }
+
+.headerRight {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;          /* ✅ 버튼도 줄바꿈 */
+  justify-content: flex-end;
+  margin-left: auto;        /* ✅ 오른쪽 정렬 유지 */
+}
+
 
 .form {
   display: grid; gap: 12px;
@@ -67,4 +77,43 @@
   padding: 0;
   cursor: pointer;
   text-decoration: underline;
+}
+
+.success {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #e6f9f0;
+  color: #1a7f5a;
+  font-weight: 600;
+}
+
+.selectedRow {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.selectedName {
+  font-weight: 600;
+}
+
+.selectedRow {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.selectedName {
+  font-weight: 600;
+}
+
+.avatarButton {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  line-height: 0;
 }

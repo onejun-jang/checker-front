@@ -5,6 +5,7 @@ import FriendsPage from "./pages/FriendsPage.jsx";
 import SendNotificationPage from "./pages/SendNotificationPage.jsx";
 import SentHistoryPage from "./pages/SentHistoryPage.jsx";
 import InboxHistoryPage from "./pages/InboxHistoryPage.jsx";
+import SettingsPage from "./pages/SettingsPage";
 import "./css/app.css";
 
 function RequireMockAuth({ children }) {
@@ -60,6 +61,15 @@ export default function App() {
           element={
             <RequireMockAuth>
               <InboxHistoryPage />
+            </RequireMockAuth>
+          }
+        />
+
+        <Route
+          path="/settings"
+          element={
+            <RequireMockAuth>
+              <SettingsPage />
             </RequireMockAuth>
           }
         />

@@ -2,18 +2,33 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "../css/send.module.css";
 import { apiFetch } from "../api/client";
+import Avatar from "../components/Avatar";
+import ImageModal from "../components/ImageModal"; // ✅ 추가
 
 export default function SendNotificationPage() {
   const navigate = useNavigate();
   const me = useMemo(() => localStorage.getItem("mockUserId"), []);
 
-  const [friends, setFriends] = useState([]); // Friend 목록(서버)
-  const [toUserId, setToUserId] = useState("");
+  const [friends, setFriends] = useState([]);
+  const [toUserId, setToUserId] = useState(""); // 기본은 선택 안 함
   const [message, setMessage] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  // ✅ 모달 상태
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalSrc, setModalSrc] = useState("");
+  const [modalTitle, setModalTitle] = useState("");
+
+  const openModal = (src, title) => {
+    if (!src) return;
+    setModalSrc(src);
+    setModalTitle(title || "");
+    setModalOpen(true);
+  };
 
   const loadFriends = async () => {
     if (!me) return;
@@ -21,16 +36,14 @@ export default function SendNotificationPage() {
     try {
       setLoading(true);
       setError("");
+      setSuccess("");
+
       const data = await apiFetch("/api/friends");
       const list = Array.isArray(data) ? data : [];
       setFriends(list);
 
-      // 드롭다운 초기 선택값: 첫 친구의 friendUserId
-      if (list.length > 0) {
-        setToUserId(String(list[0].friendUserId));
-      } else {
-        setToUserId("");
-      }
+      // 자동 선택 안 함
+      setToUserId("");
     } catch (e) {
       console.error(e);
       setError(e?.message || "친구 목록을 불러오지 못했습니다.");
@@ -46,14 +59,20 @@ export default function SendNotificationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me]);
 
+  const selectedFriend = friends.find(
+    (f) => String(f.friendUserId) === String(toUserId)
+  );
+
   const handleSend = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
 
     if (!toUserId) {
       setError("받는 사람을 선택해줘.");
       return;
     }
+
     const trimmed = message.trim();
     if (!trimmed) {
       setError("내용을 입력해줘.");
@@ -65,14 +84,14 @@ export default function SendNotificationPage() {
 
       await apiFetch("/api/notifications", {
         method: "POST",
-        body: JSON.stringify({
-          toUserId: Number(toUserId), // 서버가 Long이면 숫자로 보내는 게 깔끔
+        body: {
+          toUserId: Number(toUserId),
           message: trimmed,
-        }),
+        },
       });
 
-      // 전송 성공 → sent로 이동
-      navigate("/sent");
+      setSuccess("전송이 완료되었습니다.");
+      setMessage("");
     } catch (e) {
       console.error(e);
       setError(e?.message || "전송에 실패했습니다.");
@@ -94,12 +113,17 @@ export default function SendNotificationPage() {
         </div>
       </header>
 
-      {loading ? <div className={styles.empty}>친구 목록 불러오는 중...</div> : null}
+      {loading ? (
+        <div className={styles.empty}>친구 목록 불러오는 중...</div>
+      ) : null}
 
       {!loading && friendCount === 0 ? (
         <div className={styles.empty}>
           친구가 없어서 보낼 수 없어.{" "}
-          <button className={styles.linkButton} onClick={() => navigate("/friends")}>
+          <button
+            className={styles.linkButton}
+            onClick={() => navigate("/friends")}
+          >
             친구 추가
           </button>
           를 먼저 해줘.
@@ -113,23 +137,62 @@ export default function SendNotificationPage() {
             <select
               className={styles.select}
               value={toUserId}
-              onChange={(e) => setToUserId(e.target.value)}
+              onChange={(e) => {
+                setToUserId(e.target.value);
+                setError("");
+                setSuccess("");
+              }}
               disabled={sending}
             >
+              <option value="">- 선택 -</option>
+
               {friends.map((f) => (
-                <option key={f.id} value={String(f.friendUserId)}>
-                  userId: {f.friendUserId}
+                <option key={f.friendUserId} value={String(f.friendUserId)}>
+                  {f.friendDisplayName}
                 </option>
               ))}
             </select>
+
+            {/* ✅ 선택된 친구 미리보기 + 클릭 확대 */}
+            {selectedFriend ? (
+              <div className={styles.selectedRow}>
+                <button
+                  type="button"
+                  className={styles.avatarButton}
+                  onClick={() =>
+                    openModal(
+                      selectedFriend.friendProfileImageUrl,
+                      selectedFriend.friendDisplayName
+                    )
+                  }
+                  disabled={!selectedFriend.friendProfileImageUrl}
+                  aria-label="open profile"
+                >
+                  <Avatar
+                    src={selectedFriend.friendProfileImageUrl}
+                    size={32}
+                  />
+                </button>
+
+                <div className={styles.selectedName}>
+                  {selectedFriend.friendDisplayName}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label}>내용</label>
+            <label className={styles.label}>내용 (Ctrl+Enter시 전송)</label>
             <textarea
               className={styles.textarea}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                  e.preventDefault();
+                  handleSend(e);
+                }
+              }}
               placeholder="예: 확인 부탁! 체크해줘."
               rows={6}
               disabled={sending}
@@ -137,12 +200,25 @@ export default function SendNotificationPage() {
           </div>
 
           {error ? <div className={styles.error}>{error}</div> : null}
+          {success ? (
+            <div className={styles.success} role="status" aria-live="polite">
+              {success}
+            </div>
+          ) : null}
 
           <button className={styles.primaryButton} type="submit" disabled={sending}>
             {sending ? "전송 중..." : "전송"}
           </button>
         </form>
       ) : null}
+
+      {/* ✅ 모달 */}
+      <ImageModal
+        open={modalOpen}
+        src={modalSrc}
+        title={modalTitle}
+        onClose={() => setModalOpen(false)}
+      />
     </div>
   );
 }
