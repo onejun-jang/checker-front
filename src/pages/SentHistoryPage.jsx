@@ -1,81 +1,161 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "../css/sent.module.css";
 import { apiFetch } from "../api/client";
+import Avatar from "../components/Avatar";
+import ImageModal from "../components/ImageModal";
 
-export default function SentHistoryPage() {
-  const navigate = useNavigate();
-  const me = useMemo(() => localStorage.getItem("mockUserId"), []);
-
-  const [sent, setSent] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const loadSent = async () => {
-    if (!me) return;
-
+function formatTime(iso) {
+    if (!iso) return "";
     try {
-      setLoading(true);
-      setError("");
-      const data = await apiFetch("/api/notifications/sent");
-      setSent(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error(e);
-      setError(e?.message || "보낸 알림을 불러오지 못했습니다.");
-      setSent([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const d = new Date(iso);
+        if (!Number.isNaN(d.getTime())) return d.toLocaleString("ja-JP");
+    } catch { }
+    return iso;
+}
 
-  useEffect(() => {
-    loadSent();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [me]);
+export default function SendHistoryPage() {
+    const navigate = useNavigate();
+    const me = useMemo(() => localStorage.getItem("mockUserId"), []);
 
-  return (
-    <div className={styles.container}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>내가 보낸 알림</h1>
-        <div className={styles.headerRight}>
-          <button className={styles.ghostButton} onClick={() => navigate("/")}>
-            대시보드
-          </button>
-          <button className={styles.primaryButton} onClick={() => navigate("/send")}>
-            새 알림
-          </button>
-        </div>
-      </header>
+    const [sent, setSent] = useState([]);
+    const [userMap, setUserMap] = useState({});
 
-      {loading ? <div className={styles.empty}>불러오는 중...</div> : null}
-      {error ? <div className={styles.empty}>{error}</div> : null}
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
-      {!loading && !error && sent.length === 0 ? (
-        <div className={styles.empty}>아직 보낸 알림이 없어.</div>
-      ) : (
-        <ul className={styles.list}>
-          {sent.map((s) => (
-            <li key={s.id} className={styles.card}>
-              <div className={styles.meta}>
-                {/* 서버 필드명 기준: toUserId, createdAt */}
-                <span className={styles.to}>to @{s.toUserId}</span>
-                <span className={styles.time}>{s.createdAt}</span>
-              </div>
+    // ✅ Dashboard와 동일한 모달 상태
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalSrc, setModalSrc] = useState("");
 
-              <div className={styles.message}>{s.message}</div>
+    const openModal = (src, title) => {
+        if (!src) return;
+        setModalSrc(src);
+        setModalOpen(true);
+    };
 
-              {/* 체크 상태는 "상대방이 체크했는지"인데
-                  MVP에선 sent 쪽에서 굳이 보여주지 않아도 됨.
-                  만약 서버가 checked를 같이 내려주면 아래처럼 표시 가능 */}
-              {"checked" in s ? (
-                <div style={{ marginTop: 8, fontSize: 12, opacity: 0.75 }}>
-                  상태: {s.checked ? "체크됨" : "미처리"}
+    const loadSent = useCallback(async () => {
+        if (!me) return;
+
+        try {
+            setLoading(true);
+            setError("");
+            const data = await apiFetch("/api/notifications/sent");
+            setSent(Array.isArray(data) ? data : []);
+        } catch (e) {
+            console.error(e);
+            setError(e?.message || "보낸 알림을 불러오지 못했습니다.");
+            setSent([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [me]);
+
+    const loadUsers = useCallback(async (list) => {
+        const ids = Array.from(new Set(list.map((x) => x.toUserId)));
+        if (ids.length === 0) return;
+
+        try {
+            const users = await apiFetch("/api/users"); // 개발용 전체 유저
+            const map = {};
+            users.forEach((u) => {
+                map[u.id] = {
+                    displayName: u.displayName,
+                    profileImageUrl: u.profileImageUrl,
+                };
+            });
+            setUserMap(map);
+        } catch (e) {
+            console.warn("user load failed", e);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadSent();
+    }, [loadSent]);
+
+    useEffect(() => {
+        if (sent.length > 0) {
+            loadUsers(sent);
+        }
+    }, [sent, loadUsers]);
+
+    return (
+        <div className={styles.container}>
+            <header className={styles.header}>
+                <h1 className={styles.title}>送信履歴</h1>
+
+                <div className={styles.headerRight}>
+                    <button
+                        className={styles.ghostButton}
+                        onClick={() => navigate("/")}
+                    >
+                        戻る
+                    </button>
                 </div>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
+            </header>
+
+            {loading && <div className={styles.empty}>불러오는 중...</div>}
+            {error && <div className={styles.empty}>{error}</div>}
+
+            {!loading && !error && sent.length === 0 ? (
+                <div className={styles.empty}>아직 보낸 알림이 없어.</div>
+            ) : (
+                <ul className={styles.list}>
+                    {sent.map((item) => {
+                        const user = userMap[item.toUserId];
+                        const displayName = user?.displayName ?? `user#${item.toUserId}`;
+                        const profileImageUrl = user?.profileImageUrl ?? "";
+
+                        return (
+                            <li key={item.id} className={styles.card}>
+                                <div className={styles.cardMeta}>
+                                    {/* ✅ Dashboard 스타일 동일 패턴 */}
+                                    <div className={styles.userBlock}>
+                                        <button
+                                            type="button"
+                                            className={styles.avatarButton}
+                                            onClick={() =>
+                                                openModal(profileImageUrl)
+                                            }
+                                            disabled={!profileImageUrl}
+                                            aria-label="open profile"
+                                        >
+                                            <Avatar src={profileImageUrl} size={24} />
+                                        </button>
+
+                                        <span className={styles.to}>
+                                            {displayName}
+                                        </span>
+                                    </div>
+
+                                    <span className={styles.time}>
+                                        {formatTime(item.createdAt)}
+                                    </span>
+                                </div>
+
+                                <div className={styles.message}>
+                                    {item.message}
+                                </div>
+
+                                <div className={styles.status}>
+                                    {item.checkedAt
+                                        ? `確認(${formatTime(item.checkedAt)})`
+                                        : ""}
+                                </div>
+
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
+
+            {/* ✅ Dashboard와 동일한 위치 */}
+            <ImageModal
+                open={modalOpen}
+                src={modalSrc}
+                onClose={() => setModalOpen(false)}
+            />
+        </div>
+    );
 }

@@ -47,3 +47,31 @@
 .time { white-space: nowrap; }
 
 .message { font-size: 14px; line-height: 1.4; }
+
+.avatarButton {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.userBlock {
+  display: flex;
+  align-items: center;  /* 🔥 세로 가운데 정렬 */
+  gap: 8px;
+  min-width: 0;         /* 🔥 말줄임(ellipsis) 안정화 */
+}
+
+.to {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  line-height: 1;       /* 🔥 폰트 baseline 때문에 살짝 뜨는 거 방지 */
+}
+
+.status{
+    font-weight: 900;
+    color: green;
+}

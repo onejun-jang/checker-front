@@ -24,12 +24,10 @@ export default function FriendsPage() {
   // 모달 상태
   const [modalOpen, setModalOpen] = useState(false);
   const [modalSrc, setModalSrc] = useState("");
-  const [modalTitle, setModalTitle] = useState("");
 
-  const openModal = (src, title) => {
+  const openModal = (src) => {
     if (!src) return; // 사진 없으면 아무것도 안 함
     setModalSrc(src);
-    setModalTitle(title || "");
     setModalOpen(true);
   };
 
@@ -43,7 +41,7 @@ export default function FriendsPage() {
       setFriends(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
-      setError(e?.message || "친구 목록을 불러오지 못했습니다.");
+      setError(e?.message || "友達一覧を取得できませんでした。");
       setFriends([]);
     } finally {
       setLoading(false);
@@ -57,9 +55,9 @@ export default function FriendsPage() {
 
   const validateSearchId = (value) => {
     const v = (value ?? "").trim();
-    if (!v) return "검색용 ID를 입력해줘.";
+    if (!v) return "検索用IDを入力してください。";
     if (!/^[a-zA-Z0-9]{3,20}$/.test(v)) {
-      return "검색용 ID는 영문과 숫자만, 3~20자로 입력해줘.";
+      return "検索用IDは英数字のみ、3〜20文字で入力してください。";
     }
     return "";
   };
@@ -84,9 +82,7 @@ export default function FriendsPage() {
       const lookup = await apiFetch(
         `/api/users/lookup?searchId=${encodeURIComponent(q)}`
       );
-      // lookup: { exists: boolean, userId: number|null, displayName: string|null, profileImageUrl?: string|null }
 
-      // ✅ 검색 결과 없음
       if (!lookup?.exists || !lookup?.userId) {
         setLookupResult({
           exists: false,
@@ -98,14 +94,12 @@ export default function FriendsPage() {
         return;
       }
 
-      // ✅ 자기 자신 방지
       if (String(me) === String(lookup.userId)) {
         setLookupResult(null);
-        setError("자기 자신은 친구로 추가할 수 없어.");
+        setError("自分自身は追加できません。");
         return;
       }
 
-      // ✅ 검색 결과 있음
       setLookupResult({
         exists: true,
         userId: lookup.userId,
@@ -116,7 +110,7 @@ export default function FriendsPage() {
     } catch (e2) {
       console.error(e2);
       setLookupResult(null);
-      setError(e2?.message || "검색에 실패했습니다.");
+      setError(e2?.message || "検索に失敗しました。");
     } finally {
       setBusy(false);
     }
@@ -127,7 +121,7 @@ export default function FriendsPage() {
     setError("");
 
     if (!lookupResult?.exists || !lookupResult.userId) {
-      setError("추가할 유저가 선택되지 않았어. 먼저 검색해줘.");
+      setError("追加するユーザーが選択されていません。まず検索してください。");
       return;
     }
 
@@ -136,7 +130,7 @@ export default function FriendsPage() {
 
       await apiFetch("/api/friends", {
         method: "POST",
-        body: { friendUserId: Number(lookupResult.userId) }, // apiFetch가 JSON stringify 처리
+        body: { friendUserId: Number(lookupResult.userId) },
       });
 
       setSearchIdInput("");
@@ -144,7 +138,7 @@ export default function FriendsPage() {
       await loadFriends();
     } catch (e) {
       console.error(e);
-      setError(e?.message || "친구 추가에 실패했습니다.");
+      setError(e?.message || "友達追加に失敗しました。");
     } finally {
       setBusy(false);
     }
@@ -157,7 +151,7 @@ export default function FriendsPage() {
       await loadFriends();
     } catch (e) {
       console.error(e);
-      alert(e?.message || "삭제에 실패했습니다.");
+      alert(e?.message || "削除に失敗しました。");
     } finally {
       setBusy(false);
     }
@@ -167,22 +161,22 @@ export default function FriendsPage() {
     <div className={styles.container}>
       <header className={styles.header}>
         <div>
-          <h1 className={styles.title}>친구관리</h1>
+          <h1 className={styles.title}>友達管理</h1>
         </div>
 
         <div className={styles.headerRight}>
           <button className={styles.ghostButton} onClick={() => navigate("/")}>
-            대시보드
+            戻る
           </button>
         </div>
       </header>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>친구추가</h2>
+        <h2 className={styles.sectionTitle}>友達追加</h2>
 
         <form className={styles.form} onSubmit={handleSearch}>
           <div className={styles.field}>
-            <label className={styles.label}>검색용 ID</label>
+            <label className={styles.label}>検索用ID</label>
             <input
               className={styles.input}
               value={searchIdInput}
@@ -190,7 +184,7 @@ export default function FriendsPage() {
                 setSearchIdInput(e.target.value);
                 setLookupResult(null);
               }}
-              placeholder="ID를 입력해주세요"
+              placeholder="IDを入力してください"
               disabled={busy}
             />
           </div>
@@ -198,18 +192,16 @@ export default function FriendsPage() {
           {error ? <div className={styles.error}>{error}</div> : null}
 
           <button className={styles.primaryButton} type="submit" disabled={busy}>
-            {busy ? "검색 중..." : "검색"}
+            {busy ? "検索中..." : "検索"}
           </button>
         </form>
 
-        {/* 검색 결과 */}
         {lookupResult ? (
           <div style={{ marginTop: 12 }}>
             {lookupResult.exists ? (
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
                   alignItems: "center",
                   gap: 12,
                 }}
@@ -225,10 +217,9 @@ export default function FriendsPage() {
                       lineHeight: 0,
                     }}
                     onClick={() =>
-                      openModal(lookupResult.profileImageUrl, lookupResult.displayName)
+                      openModal(lookupResult.profileImageUrl)
                     }
                     disabled={!lookupResult.profileImageUrl}
-                    aria-label="open profile"
                   >
                     <Avatar src={lookupResult.profileImageUrl} size={28} />
                   </button>
@@ -244,27 +235,26 @@ export default function FriendsPage() {
                   disabled={busy}
                   type="button"
                 >
-                  {busy ? "처리 중..." : "추가"}
+                  {busy ? "処理中..." : "追加"}
                 </button>
               </div>
             ) : (
-              <div style={{ fontWeight: 600 }}>해당ID가 없습니다</div>
+              <div style={{ fontWeight: 600 }}>該当するIDは存在しません。</div>
             )}
           </div>
         ) : null}
       </section>
 
-      {/* 친구 목록 */}
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>친구 목록</h2>
+          <h2 className={styles.sectionTitle}>友達一覧</h2>
           <div className={styles.badge}>{friends.length}</div>
         </div>
 
-        {loading ? <div className={styles.empty}>불러오는 중...</div> : null}
+        {loading ? <div className={styles.empty}>読み込み中...</div> : null}
 
         {!loading && friends.length === 0 ? (
-          <div className={styles.empty}>아직 친구가 없어.</div>
+          <div className={styles.empty}>まだ友達がいません。</div>
         ) : (
           <ul className={styles.list}>
             {friends.map((f) => (
@@ -282,9 +272,8 @@ export default function FriendsPage() {
                       cursor: f.friendProfileImageUrl ? "pointer" : "default",
                       lineHeight: 0,
                     }}
-                    onClick={() => openModal(f.friendProfileImageUrl, f.friendDisplayName)}
+                    onClick={() => openModal(f.friendProfileImageUrl)}
                     disabled={!f.friendProfileImageUrl}
-                    aria-label="open profile"
                   >
                     <Avatar src={f.friendProfileImageUrl} size={28} />
                   </button>
@@ -297,7 +286,7 @@ export default function FriendsPage() {
                   onClick={() => handleRemove(f.friendUserId)}
                   disabled={busy}
                 >
-                  삭제
+                  削除
                 </button>
               </li>
             ))}
@@ -308,7 +297,6 @@ export default function FriendsPage() {
       <ImageModal
         open={modalOpen}
         src={modalSrc}
-        title={modalTitle}
         onClose={() => setModalOpen(false)}
       />
     </div>

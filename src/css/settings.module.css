@@ -5,12 +5,13 @@
 
 .section { border: 1px solid #e6e6e6; border-radius: 12px; padding: 16px; }
 .label { font-size: 12px; opacity: 0.75; margin-top: 12px; }
-.currentName { font-size: 16px; margin-top: 6px; }
+.displayName { font-size: 16px; margin-top: 6px; }
 
-.input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 10px; margin-top: 8px; }
+.input { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #ddd; border-radius: 10px; margin-top: 8px; }
 
 .actions { margin-top: 14px; display:flex; gap: 8px; }
 .primaryButton { padding: 10px 12px; border-radius: 10px; border: none; cursor:pointer; }
+.primaryButton:disabled {padding: 10px 12px; border-radius: 10px; border: none; cursor:default;}
 .ghostButton { padding: 10px 12px; border-radius: 10px; border: 1px solid #ddd; background: transparent; cursor:pointer; }
 
 .notice { margin: 10px 0; opacity: 0.75; }
@@ -95,4 +96,23 @@
 .previewHint {
   font-size: 12px;
   opacity: 0.75;
+}
+
+/* settings.module.css */
+
+/* 프로필 사진 오른쪽 컨트롤 영역 */
+.profileControls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* 버튼들 한 줄 배치 (줄바꿈 허용) */
+.profileActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
