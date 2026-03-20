@@ -476,3 +476,72 @@
   font-size: 12px;
   opacity: 0.7;
 }
+
+.cardBlock {
+  list-style: none;
+  margin-bottom: 12px;
+}
+
+.inlineDetailBox {
+  margin-top: 8px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.inlineDetailHeader {
+  margin-bottom: 12px;
+}
+
+.inlineDetailTitle {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.inlineDetailMeta {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.inlineMultiList {
+  display: grid;
+  gap: 8px;
+}
+
+.inlineMultiRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+}
+
+.inlineMultiTextWrap {
+  flex: 1;
+}
+
+.inlineMultiText {
+  font-weight: 600;
+}
+
+.inlineMultiTextChecked {
+  font-weight: 600;
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.inlineMultiTime {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+.inlineDetailActions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}

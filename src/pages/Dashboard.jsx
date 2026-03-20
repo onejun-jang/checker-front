@@ -63,13 +63,11 @@ export default function Dashboard() {
   const [composerError, setComposerError] = useState("");
   const [composerSuccess, setComposerSuccess] = useState("");
 
-  // ✅ [추가] 계속 작성 모드(송신 후 창 유지)
+  // ✅ 계속 작성 모드(송신 후 창 유지)
   const [keepComposerOpen, setKeepComposerOpen] = useState(false);
 
   // =========================
-  // ✅ [추가] SIMPLE / MULTI 선택 + MULTI 입력들 + MULTI 제목
-  // (백엔드: POST /api/notifications 는 SIMPLE 그대로
-  //         POST /api/notifications/multi 는 title + items 필요)
+  // ✅ SIMPLE / MULTI 선택 + MULTI 입력들 + MULTI 제목
   // =========================
   const [sendKind, setSendKind] = useState("SIMPLE"); // "SIMPLE" | "MULTI"
   const [multiTitle, setMultiTitle] = useState("");
@@ -91,25 +89,19 @@ export default function Dashboard() {
   }, []);
 
   // =========================
-  // ✅ [추가] 더보기 드롭다운
+  // ✅ 더보기 드롭다운
   // =========================
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
   // =========================
-  // ✅ [추가] MULTI 상세 모달
+  // ✅ MULTI 인라인 확장 상세
   // =========================
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState("");
-  const [detail, setDetail] = useState(null);
-  // detail: { id, fromUserId, toUserId, kind, message, createdAt, checkedAt, items: [{id,text,checkedAt}] }
-
-  const closeDetail = () => {
-    setDetailOpen(false);
-    setDetail(null);
-    setDetailError("");
-  };
+  const [expandedId, setExpandedId] = useState(null);
+  const [detailMap, setDetailMap] = useState({});
+  const [detailLoadingId, setDetailLoadingId] = useState(null);
+  const [detailErrorMap, setDetailErrorMap] = useState({});
+  const [submitLoadingId, setSubmitLoadingId] = useState(null);
 
   const openModal = (src) => {
     if (!src) return;
@@ -133,7 +125,6 @@ export default function Dashboard() {
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
-  // ✅ 드롭다운 열려있을 때 바깥 클릭하면 닫힘
   useEffect(() => {
     if (!menuOpen) return;
 
@@ -181,7 +172,6 @@ export default function Dashboard() {
     }
   }, [me]);
 
-  // ✅ 설정 저장: 확인 모달 스킵(바로 체크)
   const saveSkipConfirm = useCallback(
     async (next) => {
       if (!me) return;
@@ -219,13 +209,12 @@ export default function Dashboard() {
     }
   }, [me]);
 
-  // ✅ inbox에 등장하는 fromUserId들을 유저정보로 매핑 (임시: 개발용 /api/users 사용)
   const loadUsersForInbox = useCallback(async (list) => {
     const ids = Array.from(new Set(list.map((x) => x.fromUserId).filter(Boolean)));
     if (ids.length === 0) return;
 
     try {
-      const users = await apiFetch("/api/users"); // 개발용 전체 유저
+      const users = await apiFetch("/api/users");
       const map = {};
       users.forEach((u) => {
         map[u.id] = {
@@ -245,15 +234,12 @@ export default function Dashboard() {
     try {
       setFriendsLoading(true);
       const data = await apiFetch("/api/friends");
-
       const friendList = Array.isArray(data) ? data : [];
 
-      // ✅ 나 자신 추가
       const meData = await apiFetch("/api/users/me");
-
       const myselfOption = {
         friendUserId: meData.id,
-        friendDisplayName: meData.displayName + " (自分)",
+        friendDisplayName: `${meData.displayName} (自分)`,
         friendProfileImageUrl: meData.profileImageUrl,
       };
 
@@ -266,34 +252,49 @@ export default function Dashboard() {
     }
   }, [me]);
 
-  // ✅ MULTI 상세 로드
   const loadDetail = useCallback(async (notificationId) => {
     try {
-      setDetailLoading(true);
-      setDetailError("");
+      setDetailLoadingId(notificationId);
+      setDetailErrorMap((prev) => ({ ...prev, [notificationId]: "" }));
+
       const d = await apiFetch(`/api/notifications/${notificationId}`);
-      setDetail(d);
+
+      setDetailMap((prev) => ({
+        ...prev,
+        [notificationId]: d,
+      }));
+
       return d;
     } catch (e) {
       console.error(e);
-      setDetailError(e?.message || "詳細を取得できませんでした。");
+      setDetailErrorMap((prev) => ({
+        ...prev,
+        [notificationId]: e?.message || "詳細を取得できませんでした。",
+      }));
       return null;
     } finally {
-      setDetailLoading(false);
+      setDetailLoadingId((current) => (current === notificationId ? null : current));
     }
   }, []);
 
-  // ✅ MULTI item 토글
+  // ✅ item.checkedAt 즉시 토글
   const toggleMultiItem = useCallback(
     async (notificationId, itemId) => {
+      const detail = detailMap[notificationId];
+      if (detail?.checkedAt) return;
+
       try {
         setBusy(true);
+
         const d = await apiFetch(`/api/notifications/${notificationId}/items/${itemId}/toggle`, {
           method: "PATCH",
         });
-        setDetail(d);
 
-        // ✅ 리스트의 checkedAt(완료 여부)도 최신화
+        setDetailMap((prev) => ({
+          ...prev,
+          [notificationId]: d,
+        }));
+
         await loadInbox();
       } catch (e) {
         console.error(e);
@@ -302,7 +303,40 @@ export default function Dashboard() {
         setBusy(false);
       }
     },
-    [loadInbox],
+    [detailMap, loadInbox],
+  );
+
+  // ✅ notification.checkedAt 최종 송신
+  // 백엔드 예시:
+  // PATCH /api/notifications/{notificationId}/submit
+  // body 없음
+  // 응답: 최신 detail
+  const submitMultiNotification = useCallback(
+    async (notificationId) => {
+      const detail = detailMap[notificationId];
+      if (!detail || detail.checkedAt) return;
+
+      try {
+        setSubmitLoadingId(notificationId);
+
+        const updated = await apiFetch(`/api/notifications/${notificationId}/submit`, {
+          method: "PATCH",
+        });
+
+        setDetailMap((prev) => ({
+          ...prev,
+          [notificationId]: updated,
+        }));
+
+        await loadInbox();
+      } catch (e) {
+        console.error(e);
+        alert(e?.message || "送信に失敗しました。");
+      } finally {
+        setSubmitLoadingId(null);
+      }
+    },
+    [detailMap, loadInbox],
   );
 
   useEffect(() => {
@@ -320,7 +354,6 @@ export default function Dashboard() {
     navigate("/login", { replace: true });
   };
 
-  // ✅ 체크 1회 (서버 PATCH)
   const handleCheck = async (notificationId) => {
     try {
       setBusy(true);
@@ -340,7 +373,6 @@ export default function Dashboard() {
   const headerTitle = displayName ? displayName : "Dashboard";
   const myModalSrc = profileImageUrl || "/default-avatar.png";
 
-  // ✅ 컨펌 모달: Esc/Enter 처리 + 스크롤 잠금
   useEffect(() => {
     if (!confirmOpen) return;
 
@@ -367,7 +399,6 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirmOpen, confirmTargetId, busy]);
 
-  // ✅ 인라인 작성폼 전송 (백엔드 스펙에 맞춤)
   const handleComposerSend = useCallback(async () => {
     setComposerError("");
     setComposerSuccess("");
@@ -387,13 +418,11 @@ export default function Dashboard() {
           return;
         }
 
-        // ✅ 기존 SIMPLE API 그대로
         await apiFetch("/api/notifications", {
           method: "POST",
           body: { toUserId: Number(toUserId), message: trimmed },
         });
       } else {
-        // ✅ MULTI API: /api/notifications/multi
         const title = (multiTitle ?? "").trim();
         if (!title) {
           setComposerError("タイトルを入力してください。");
@@ -421,7 +450,6 @@ export default function Dashboard() {
 
       setComposerSuccess("送信しました。");
 
-      // ✅ 입력 초기화
       setToUserId("");
       setMessage("");
       setSendKind("SIMPLE");
@@ -446,28 +474,126 @@ export default function Dashboard() {
 
   const selectedFriend = friends.find((f) => String(f.friendUserId) === String(toUserId));
 
+  const renderExpandedDetail = (itemId) => {
+    const detail = detailMap[itemId];
+    const isDetailLoading = detailLoadingId === itemId;
+    const detailError = detailErrorMap[itemId];
+    const submitted = !!detail?.checkedAt;
+    const canEdit = detail && String(me) === String(detail.toUserId) && !submitted;
+    const isSubmitLoading = submitLoadingId === itemId;
+
+    return (
+      <div className={styles.inlineDetailBox}>
+        {isDetailLoading ? <div className={styles.empty}>読み込み中...</div> : null}
+        {!isDetailLoading && detailError ? <div className={styles.empty}>{detailError}</div> : null}
+
+        {!isDetailLoading && !detailError && detail ? (
+          <>
+            {Array.isArray(detail.items) && detail.items.length > 0 ? (
+              <div className={styles.inlineMultiList}>
+                {detail.items.map((it) => {
+                  const checked = !!it.checkedAt;
+
+                  return (
+                    <label key={it.id} className={styles.inlineMultiRow}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={!canEdit || busy || isSubmitLoading}
+                        onChange={() => toggleMultiItem(detail.id, it.id)}
+                      />
+                      <div className={styles.inlineMultiTextWrap}>
+                        <div
+                          className={
+                            checked ? styles.inlineMultiTextChecked : styles.inlineMultiText
+                          }
+                        >
+                          {it.text}
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className={styles.empty}>項目がありません。</div>
+            )}
+
+            <div className={styles.inlineDetailActions}>
+              {!submitted && String(me) === String(detail.toUserId) ? (
+                <button
+                  type="button"
+                  className={styles.primaryButton}
+                  disabled={busy || isSubmitLoading}
+                  onClick={() => submitMultiNotification(detail.id)}
+                >
+                  {isSubmitLoading ? "送信中..." : "送信"}
+                </button>
+              ) : null}
+
+              <button
+                type="button"
+                className={styles.ghostButton}
+                onClick={() => setExpandedId(null)}
+              >
+                閉じる
+              </button>
+            </div>
+
+            {submitted ? (
+              <div className={styles.confirmHint}>※ 送信済みのため、これ以上修正できません</div>
+            ) : String(me) !== String(detail.toUserId) ? (
+              <div className={styles.confirmHint}>※ 受信者のみ編集できます</div>
+            ) : (
+              <div className={styles.confirmHint}>
+                ※ 項目を選択した後、「送信」を押すと最終確定されます
+              </div>
+            )}
+          </>
+        ) : null}
+      </div>
+    );
+  };
+
   const renderInboxCard = (item, mode) => {
     const from = userMap[item.fromUserId];
     const fromName = from?.displayName ?? `user#${item.fromUserId}`;
     const fromImg = from?.profileImageUrl ?? "";
 
     const cardClass = mode === "incoming" ? styles.inboxCard : styles.inboxCardMuted;
+    const isExpanded = expandedId === item.id;
 
-    // ✅ 공통 클릭 핸들러 (설정에 따라 모달 or 즉시 체크)
-    // + MULTI면 상세 모달 열기
+    const toggleExpanded = async () => {
+      const cached = detailMap[item.id];
+
+      if (cached && String(cached.kind) === "MULTI") {
+        setExpandedId((prev) => (prev === item.id ? null : item.id));
+        return;
+      }
+
+      const d = await loadDetail(item.id);
+      if (d && String(d.kind) === "MULTI") {
+        setExpandedId((prev) => (prev === item.id ? null : item.id));
+      }
+    };
+
     const handleIncomingAction = async () => {
       if (busy) return;
 
-      // ✅ 먼저 상세로 kind 확인
+      const cached = detailMap[item.id];
+      if (cached && String(cached.kind) === "MULTI") {
+        setExpandedId((prev) => (prev === item.id ? null : item.id));
+        return;
+      }
+
       const d = await loadDetail(item.id);
       if (!d) return;
 
       if (String(d.kind) === "MULTI") {
-        setDetailOpen(true);
+        setExpandedId((prev) => (prev === item.id ? null : item.id));
         return;
       }
 
-      // ✅ SIMPLE은 기존 로직 그대로
       if (skipConfirm) {
         await handleCheck(item.id);
         return;
@@ -476,60 +602,60 @@ export default function Dashboard() {
       openConfirm(item, fromName);
     };
 
-    return (
-      <li
-        key={item.id}
-        className={cardClass}
-        onClick={
-          mode === "incoming"
-            ? handleIncomingAction
-            : async () => {
-                // ✅ history라도 MULTI면 상세 열기
-                const d = await loadDetail(item.id);
-                if (d && String(d.kind) === "MULTI") setDetailOpen(true);
-              }
-        }
-        role={mode === "incoming" ? "button" : undefined}
-        tabIndex={mode === "incoming" ? 0 : undefined}
-        onKeyDown={
-          mode === "incoming"
-            ? async (e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  await handleIncomingAction();
-                }
-              }
-            : undefined
-        }
-        aria-label={mode === "incoming" ? "通知を確認" : undefined}
-      >
-        <div className={styles.inboxCardHeader}>
-          <div className={styles.userBlock}>
-            <button
-              type="button"
-              className={styles.avatarButton}
-              onClick={(e) => {
-                e.stopPropagation();
-                openModal(fromImg || "/default-avatar.png");
-              }}
-              aria-label="open sender profile"
-            >
-              <Avatar src={fromImg} size={24} alt={fromName} />
-            </button>
+    const handleHistoryAction = async () => {
+      await toggleExpanded();
+    };
 
-            <span className={styles.fromName}>{fromName}</span>
+    const handleCardKeyDown = async (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+
+      if (mode === "incoming") {
+        await handleIncomingAction();
+      } else {
+        await handleHistoryAction();
+      }
+    };
+
+    return (
+      <li key={item.id} className={styles.cardBlock}>
+        <div
+          className={cardClass}
+          onClick={mode === "incoming" ? handleIncomingAction : handleHistoryAction}
+          role="button"
+          tabIndex={0}
+          onKeyDown={handleCardKeyDown}
+          aria-label={mode === "incoming" ? "通知を確認" : "通知詳細を表示"}
+          aria-expanded={isExpanded}
+        >
+          <div className={styles.inboxCardHeader}>
+            <div className={styles.userBlock}>
+              <button
+                type="button"
+                className={styles.avatarButton}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openModal(fromImg || "/default-avatar.png");
+                }}
+                aria-label="open sender profile"
+              >
+                <Avatar src={fromImg} size={24} alt={fromName} />
+              </button>
+
+              <span className={styles.fromName}>{fromName}</span>
+            </div>
+
+            <span className={styles.time}>{formatTime(item.createdAt)}</span>
           </div>
 
-          <span className={styles.time}>{formatTime(item.createdAt)}</span>
+          <div className={styles.message}>{item.message}</div>
+
+          {mode === "incoming" ? null : (
+            <div className={styles.checkedInfo}>確認済み: {formatTime(item.checkedAt)}</div>
+          )}
         </div>
 
-        <div className={styles.message}>{item.message}</div>
-
-        {mode === "incoming" ? (
-          ""
-        ) : (
-          <div className={styles.checkedInfo}>確認済み: {formatTime(item.checkedAt)}</div>
-        )}
+        {isExpanded ? renderExpandedDetail(item.id) : null}
       </li>
     );
   };
@@ -550,7 +676,6 @@ export default function Dashboard() {
           <h1 className={styles.title}>{headerTitle}</h1>
         </div>
 
-        {/* ✅ 오른쪽 상단: 더보기 드롭다운 */}
         <div className={styles.headerRight}>
           <button
             className={styles.sendButton}
@@ -565,7 +690,6 @@ export default function Dashboard() {
                 setMessage("");
                 setKeepComposerOpen(false);
 
-                // ✅ 추가: 타입/멀티 초기화
                 setSendKind("SIMPLE");
                 setMultiTitle("");
                 setMultiItems([{ id: makeId(), text: "" }]);
@@ -576,6 +700,7 @@ export default function Dashboard() {
           >
             新規通知
           </button>
+
           <div className={styles.menuWrap} ref={menuRef}>
             <button
               type="button"
@@ -697,7 +822,6 @@ export default function Dashboard() {
                 ) : null}
               </div>
 
-              {/* ✅ 宛先 밑: SIMPLE/MULTI 선택 */}
               <div className={styles.field}>
                 <label className={styles.label}>送信タイプ</label>
                 <select
@@ -715,7 +839,6 @@ export default function Dashboard() {
                 </select>
               </div>
 
-              {/* ✅ MULTI: title 입력 (백엔드 필수) */}
               {sendKind === "MULTI" ? (
                 <div className={styles.field}>
                   <label className={styles.label}>タイトル</label>
@@ -729,7 +852,6 @@ export default function Dashboard() {
                 </div>
               ) : null}
 
-              {/* ✅ SIMPLE: 기존 textarea 그대로 */}
               {sendKind === "SIMPLE" ? (
                 <div className={styles.field}>
                   <label className={styles.label}>内容（Ctrl+Enterで送信）</label>
@@ -750,7 +872,6 @@ export default function Dashboard() {
                 </div>
               ) : null}
 
-              {/* ✅ MULTI: 항목 여러개 +/− */}
               {sendKind === "MULTI" ? (
                 <div className={styles.field}>
                   <label className={styles.label}>チェック項目（＋で追加 / －で削除）</label>
@@ -865,10 +986,8 @@ export default function Dashboard() {
         )}
       </section>
 
-      {/* ✅ 이미지 확대 모달 */}
       <ImageModal open={modalOpen} src={modalSrc} onClose={() => setModalOpen(false)} />
 
-      {/* ✅ 확인 모달 */}
       {confirmOpen && (
         <div className={styles.confirmOverlay} onClick={closeConfirm} role="presentation">
           <div
@@ -910,7 +1029,6 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* ✅ 다음부터는 확인 없이 바로 체크 */}
             <div className={styles.confirmOptionRow}>
               <label className={styles.checkboxRow}>
                 <input
@@ -924,98 +1042,6 @@ export default function Dashboard() {
             </div>
 
             <div className={styles.confirmHint}>Enter = はい · Esc = 閉じる</div>
-          </div>
-        </div>
-      )}
-
-      {/* ✅ MULTI 상세 모달 */}
-      {detailOpen && (
-        <div className={styles.confirmOverlay} onClick={closeDetail} role="presentation">
-          <div
-            className={styles.confirmBox}
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label="詳細モーダル"
-          >
-            <div className={styles.confirmTitle}>{detailLoading ? "読み込み中..." : "詳細"}</div>
-
-            {detailError ? <div className={styles.empty}>{detailError}</div> : null}
-
-            {detail && !detailLoading ? (
-              <>
-                <div className={styles.confirmPreview}>
-                  <div style={{ fontWeight: 700, marginBottom: 6 }}>{detail.message}</div>
-                  <div style={{ fontSize: 12, opacity: 0.75 }}>
-                    {formatTime(detail.createdAt)}
-                    {detail.checkedAt ? ` · 完了: ${formatTime(detail.checkedAt)}` : ""}
-                  </div>
-                </div>
-
-                {Array.isArray(detail.items) && detail.items.length > 0 ? (
-                  <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
-                    {detail.items.map((it) => {
-                      const checked = !!it.checkedAt;
-                      const canToggle = String(me) === String(detail.toUserId);
-
-                      return (
-                        <label
-                          key={it.id}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            padding: "10px 12px",
-                            borderRadius: 12,
-                            border: "1px solid rgba(0,0,0,0.08)",
-                            background: checked ? "rgba(0,0,0,0.03)" : "transparent",
-                            cursor: canToggle ? "pointer" : "default",
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            disabled={!canToggle || busy}
-                            onChange={() => toggleMultiItem(detail.id, it.id)}
-                          />
-                          <div style={{ flex: 1 }}>
-                            <div
-                              style={{
-                                fontWeight: 600,
-                                textDecoration: checked ? "line-through" : "none",
-                              }}
-                            >
-                              {it.text}
-                            </div>
-                            {checked ? (
-                              <div style={{ fontSize: 12, opacity: 0.7 }}>
-                                {formatTime(it.checkedAt)}
-                              </div>
-                            ) : null}
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className={styles.empty} style={{ marginTop: 12 }}>
-                    項目がありません。
-                  </div>
-                )}
-              </>
-            ) : null}
-
-            <div className={styles.confirmActions} style={{ marginTop: 14 }}>
-              <button type="button" className={styles.primaryButton} onClick={closeDetail}>
-                閉じる
-              </button>
-            </div>
-
-            {detail && String(me) !== String(detail.toUserId) ? (
-              <div className={styles.confirmHint}>※ 受信者のみチェックできます</div>
-            ) : (
-              <div className={styles.confirmHint}>※ チェックはいつでも切り替え可能</div>
-            )}
           </div>
         </div>
       )}
